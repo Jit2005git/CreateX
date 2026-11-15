@@ -1,0 +1,198 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Global Base ─────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-surface-base text-white font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-surface-elevated;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-border-light rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-brand-purple;
+  }
+}
+
+/* ─── Component Utilities ────────────────────────────────────────────────── */
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-surface-card border border-surface-border rounded-2xl shadow-card;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300 hover:border-surface-border-light hover:shadow-card-hover hover:-translate-y-0.5;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
+           bg-gradient-to-r from-brand-purple to-brand-cyan text-white
+           shadow-brand transition-all duration-200
+           hover:shadow-brand hover:scale-[1.02] active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm
+           bg-surface-card border border-surface-border text-gray-300
+           transition-all duration-200
+           hover:border-surface-border-light hover:text-white hover:bg-surface-elevated
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+           text-gray-400 transition-all duration-200
+           hover:text-white hover:bg-surface-card;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm
+           text-red-400 border border-red-900/50 transition-all duration-200
+           hover:bg-red-900/20 hover:text-red-300 hover:border-red-700;
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl bg-surface-elevated border border-surface-border
+           text-white placeholder-gray-500 text-sm
+           focus:outline-none focus:border-brand-purple focus:ring-1 focus:ring-brand-purple/50
+           transition-all duration-200;
+  }
+
+  .textarea {
+    @apply input resize-none;
+  }
+
+  .select {
+    @apply input appearance-none cursor-pointer;
+  }
+
+  /* Labels */
+  .label {
+    @apply block text-sm font-medium text-gray-300 mb-2;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-brand-purple-light to-brand-cyan-light bg-clip-text text-transparent;
+  }
+
+  /* Section headers */
+  .section-title {
+    @apply text-2xl font-bold text-white;
+  }
+
+  .section-subtitle {
+    @apply text-gray-400 text-sm mt-1;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-purple {
+    @apply badge bg-brand-purple/20 text-brand-purple-light border border-brand-purple/30;
+  }
+
+  .badge-cyan {
+    @apply badge bg-brand-cyan/20 text-brand-cyan-light border border-brand-cyan/30;
+  }
+
+  .badge-amber {
+    @apply badge bg-brand-amber/20 text-brand-amber border border-brand-amber/30;
+  }
+
+  /* Loading skeleton */
+  .skeleton {
+    @apply animate-pulse bg-surface-card rounded-xl;
+    background: linear-gradient(
+      90deg,
+      #141428 25%,
+      #1e1e3a 50%,
+      #141428 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* Color swatch */
+  .color-swatch {
+    @apply w-8 h-8 rounded-lg border-2 border-white/10 shadow-md cursor-pointer
+           transition-transform duration-200 hover:scale-110;
+  }
+
+  /* Tab */
+  .tab {
+    @apply px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200
+           text-gray-400 cursor-pointer;
+  }
+
+  .tab-active {
+    @apply tab bg-brand-purple/20 text-brand-purple-light border border-brand-purple/30;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-surface-border my-6;
+  }
+}
+
+/* ─── Custom Animations ──────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ─── Glow effects ───────────────────────────────────────────────────────── */
+.glow-purple {
+  box-shadow: 0 0 40px rgba(124, 58, 237, 0.4), 0 0 80px rgba(124, 58, 237, 0.1);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 40px rgba(6, 182, 212, 0.4), 0 0 80px rgba(6, 182, 212, 0.1);
+}
+
+/* ─── Noise texture overlay ──────────────────────────────────────────────── */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  border-radius: inherit;
+}
