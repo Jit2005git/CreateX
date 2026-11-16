@@ -132,18 +132,6 @@ def _build_context(data: dict, request: CampaignRequest) -> CampaignContext:
 # --- Main service function ---
 
 async def generate_campaign(request: CampaignRequest) -> CampaignContext:
-    """
-    Entry point for the AI orchestration pipeline.
-    Calls Gemini text model asynchronously and returns a validated CampaignContext.
-
-    Raises:
-        GeminiNotConfiguredError - API key missing.
-        GeminiAuthError          - API key invalid (HTTP 401/403).
-        GeminiQuotaError         - Rate limit or quota exceeded (HTTP 429).
-        GeminiModelError         - Bad model ID or malformed request (HTTP 400).
-        GeminiResponseError      - Gemini returned un-parseable or incomplete JSON.
-        APIError                 - Any other Gemini API error.
-    """
     client = _get_gemini_client()
 
     prompt = CAMPAIGN_PROMPT_TEMPLATE.format(
