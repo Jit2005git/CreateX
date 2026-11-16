@@ -6,9 +6,10 @@ import uuid
 
 
 class ProjectSave(BaseModel):
-    session_id: str
     title: str
     original_idea: str
+    session_id: Optional[str] = None
+    user_id: Optional[str] = None
     industry: Optional[str] = None
     target_audience: Optional[str] = None
     tone: Optional[str] = None
@@ -22,6 +23,22 @@ class AssetSave(BaseModel):
     asset_type: str  # 'campaign' | 'poster' | 'storyboard' | 'social'
     content: Optional[dict[str, Any]] = None
     asset_url: Optional[str] = None
+    storage_path: Optional[str] = None
+
+
+class AssetCreateRequest(BaseModel):
+    asset_type: str = Field(..., description="Asset type: 'campaign' | 'poster' | 'storyboard' | 'social'")
+    content: Optional[dict[str, Any]] = None
+    asset_url: Optional[str] = None
+    storage_path: Optional[str] = None
+
+
+class AssetSaveResponse(BaseModel):
+    success: bool = True
+    asset_id: str
+    project_id: str
+    asset_type: str
+    message: str = "Asset saved successfully"
 
 
 class AssetResponse(BaseModel):
@@ -30,14 +47,22 @@ class AssetResponse(BaseModel):
     asset_type: str
     content: Optional[dict[str, Any]] = None
     asset_url: Optional[str] = None
+    storage_path: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class AssetListResponse(BaseModel):
+    success: bool = True
+    assets: list[AssetResponse]
+    total: int
 
 
 class ProjectResponse(BaseModel):
     id: str
-    session_id: str
     title: str
     original_idea: str
+    session_id: Optional[str] = None
+    user_id: Optional[str] = None
     industry: Optional[str] = None
     target_audience: Optional[str] = None
     tone: Optional[str] = None

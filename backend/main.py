@@ -13,20 +13,23 @@ from app.services.storage_service import LOCAL_STORAGE_DIR, ensure_storage_dirs
 # Ensure storage directories exist
 ensure_storage_dirs()
 
+# Validate critical production invariants at startup
+settings.validate_production_safety()
+
 app = FastAPI(
     title="CreateX AI API",
     description="AI-powered creative production platform API",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url=None if settings.is_production else "/docs",
+    redoc_url=None if settings.is_production else "/redoc",
 )
 
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000", "*"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -54,6 +57,9 @@ async def health():
         "environment": settings.app_env,
         "gemini_configured": bool(settings.gemini_api_key),
         "supabase_configured": is_supabase_configured(),
+        "rate_limiting_enabled": settings.rate_limit_enabled,
+        "rate_limit_store": "redis" if bool(settings.redis_url) else "in-memory",
+        "distributed_limiter_active": bool(settings.redis_url),
     }
 
 

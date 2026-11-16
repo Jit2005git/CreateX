@@ -17,7 +17,7 @@ import {
   Clock,
   Layers,
 } from 'lucide-react'
-import { getProject } from '../services/api'
+import { getProject, saveAsset } from '../services/api'
 import CampaignOverview from '../components/workspace/CampaignOverview'
 import PosterStudio from '../components/workspace/PosterStudio'
 import StoryboardStudio from '../components/workspace/StoryboardStudio'
@@ -140,6 +140,22 @@ export default function Workspace() {
   }
 
   // Synchronized state handlers preserving all other assets
+  async function persistAsset(assetType, content, assetUrl = null, storagePath = null) {
+    if (!projectId || projectId === 'local') return
+    try {
+      await saveAsset(projectId, {
+        asset_type: assetType,
+        content: content,
+        asset_url: assetUrl,
+        storage_path: storagePath,
+      })
+    } catch (err) {
+      // Graceful fallback: Supabase not yet configured or offline
+      // Local sessionStorage already stores the generated asset safely
+      console.warn(`Could not persist ${assetType} to remote database:`, err.message)
+    }
+  }
+
   function handleUpdateCampaign(updatedCampaign) {
     setCampaign(updatedCampaign)
     sessionStorage.setItem(`campaign_${projectId}`, JSON.stringify(updatedCampaign))
@@ -153,6 +169,7 @@ export default function Workspace() {
       return next
     })
     setMetadata(prev => ({ ...prev, updated_at: new Date().toISOString() }))
+    persistAsset('poster', posterData, posterData?.image_url, posterData?.storage_path)
   }
 
   function handleStoryboardGenerated(storyboardData) {
@@ -162,6 +179,7 @@ export default function Workspace() {
       return next
     })
     setMetadata(prev => ({ ...prev, updated_at: new Date().toISOString() }))
+    persistAsset('storyboard', storyboardData)
   }
 
   function handleSocialGenerated(socialData) {
@@ -171,6 +189,7 @@ export default function Workspace() {
       return next
     })
     setMetadata(prev => ({ ...prev, updated_at: new Date().toISOString() }))
+    persistAsset('social', socialData)
   }
 
   // Export actions

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, PlusCircle, FolderOpen, TrendingUp, Image, FileText, Zap } from 'lucide-react'
+import { Sparkles, PlusCircle, FolderOpen, TrendingUp, Image, FileText, Zap, AlertCircle } from 'lucide-react'
 import { getProjects, deleteProject } from '../services/api'
 import { getSessionId } from '../services/session'
+import { useAuth } from '../context/AuthContext'
 import ProjectCard from '../components/dashboard/ProjectCard'
 import StatsCard from '../components/dashboard/StatsCard'
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -15,43 +17,75 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchProjects()
-  }, [])
+  }, [user])
 
   async function fetchProjects() {
     try {
       setLoading(true)
+      setError(null)
       const data = await getProjects(sessionId)
-      if (data?.projects && data.projects.length > 0) {
+      if (data?.projects && Array.isArray(data.projects) && data.projects.length > 0) {
         setProjects(data.projects)
         return
       }
-    } catch {
-      // Supabase not configured or query failed — check session fallback
-    }
 
-    // Session fallback for demo/offline workspace
-    const local = sessionStorage.getItem('createx_campaign_local') || sessionStorage.getItem('campaign_local')
-    if (local) {
-      try {
-        const c = JSON.parse(local)
-        setProjects([
-          {
-            id: 'local',
-            title: c.campaign_name || 'Active Campaign',
-            original_idea: c.original_idea || c.description || 'Active session campaign project',
-            industry: c.industry || 'General',
-            created_at: new Date().toISOString(),
-            tone: c.tone || c.writing_tone,
-            campaign_data: c,
-          },
-        ])
-      } catch {
+      // Check session fallback for demo/offline workspace (guest mode only)
+      if (!user) {
+        const local = sessionStorage.getItem('createx_campaign_local') || sessionStorage.getItem('campaign_local')
+        if (local) {
+          try {
+            const c = JSON.parse(local)
+            setProjects([
+              {
+                id: 'local',
+                title: c.campaign_name || 'Active Campaign',
+                original_idea: c.original_idea || c.description || 'Active session campaign project',
+                industry: c.industry || 'General',
+                created_at: new Date().toISOString(),
+                tone: c.tone || c.writing_tone,
+                campaign_data: c,
+              },
+            ])
+            return
+          } catch {
+            setProjects([])
+          }
+        } else {
+          setProjects([])
+        }
+      } else {
         setProjects([])
       }
-    } else {
+    } catch (err) {
+      // Supabase query failed — check session fallback in guest mode
+      if (!user) {
+        const local = sessionStorage.getItem('createx_campaign_local') || sessionStorage.getItem('campaign_local')
+        if (local) {
+          try {
+            const c = JSON.parse(local)
+            setProjects([
+              {
+                id: 'local',
+                title: c.campaign_name || 'Active Campaign',
+                original_idea: c.original_idea || c.description || 'Active session campaign project',
+                industry: c.industry || 'General',
+                created_at: new Date().toISOString(),
+                tone: c.tone || c.writing_tone,
+                campaign_data: c,
+              },
+            ])
+            return
+          } catch {
+            setProjects([])
+          }
+        }
+      }
       setProjects([])
+      // Only set visible error if neither remote nor local projects exist
+      setError(err.message || 'Could not connect to project database.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function handleDelete(projectId) {
@@ -132,6 +166,22 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Error notification if failed to fetch */}
+      {error && !loading && (
+        <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            onClick={fetchProjects}
+            className="text-xs font-medium text-red-200 underline hover:text-white transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => (
@@ -140,18 +190,40 @@ export default function Dashboard() {
         </div>
       ) : projects.length === 0 ? (
         /* Empty state */
-        <div className="card p-16 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center mx-auto mb-5">
+        <div data-testid="dashboard-empty-state" className="card p-12 sm:p-16 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-brand-purple/20 border border-brand-purple/30 flex items-center justify-center mx-auto mb-5 shadow-brand-sm">
             <Sparkles className="w-8 h-8 text-brand-purple-light" />
           </div>
-          <h3 className="text-xl font-semibold text-white mb-2">No campaigns yet</h3>
-          <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm">
-            Create your first AI campaign and watch your idea transform into a complete creative package.
-          </p>
-          <Link to="/create" className="btn-primary mx-auto">
-            <PlusCircle className="w-4 h-4" />
-            Create Your First Campaign
-          </Link>
+
+          {user ? (
+            /* Authenticated Cloud Empty State */
+            <div data-testid="cloud-empty-state">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-purple/10 border border-brand-purple/30 text-brand-purple-light text-xs font-medium mb-3">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Cloud Workspace Active ({user.email})
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">No cloud campaigns yet</h3>
+              <p className="text-gray-400 mb-6 max-w-md mx-auto text-sm leading-relaxed">
+                Your cloud workspace is ready. Launch your first project to save posters, storyboards, and social content securely across devices.
+              </p>
+              <Link to="/create" className="btn-primary mx-auto">
+                <PlusCircle className="w-4 h-4" />
+                Create Your First Cloud Campaign
+              </Link>
+            </div>
+          ) : (
+            /* Guest Empty State */
+            <div data-testid="guest-empty-state">
+              <h3 className="text-xl font-semibold text-white mb-2">No campaigns yet</h3>
+              <p className="text-gray-500 mb-6 max-w-sm mx-auto text-sm">
+                Create your first AI campaign and watch your idea transform into a complete creative package.
+              </p>
+              <Link to="/create" className="btn-primary mx-auto">
+                <PlusCircle className="w-4 h-4" />
+                Create Your First Campaign
+              </Link>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

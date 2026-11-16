@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Sparkles, Lightbulb, Users, Mic, Monitor, Palette,
@@ -6,6 +6,12 @@ import {
 } from 'lucide-react'
 import { generateCampaign, saveProject } from '../services/api'
 import { getSessionId } from '../services/session'
+
+const GENERATION_STAGES = [
+  { id: 'tone', label: 'Analyzing brand tone...', desc: 'Extracting key themes and emotional positioning' },
+  { id: 'angles', label: 'Structuring creative angles...', desc: 'Crafting multi-platform hooks and visual concepts' },
+  { id: 'strategy', label: 'Finalizing strategy...', desc: 'Synthesizing complete campaign package' },
+]
 
 const INDUSTRIES = [
   'Technology', 'Fashion & Apparel', 'Food & Beverage', 'Health & Wellness',
@@ -48,6 +54,16 @@ export default function CreateCampaign() {
   const [step, setStep] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [generationStage, setGenerationStage] = useState(0)
+  const stageIntervalRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (stageIntervalRef.current) {
+        clearInterval(stageIntervalRef.current)
+      }
+    }
+  }, [])
 
   const [form, setForm] = useState({
     idea: '',
@@ -81,6 +97,13 @@ export default function CreateCampaign() {
   async function handleGenerate() {
     setLoading(true)
     setError(null)
+    setGenerationStage(0)
+
+    // Illustrative progress feedback across 3 stages
+    stageIntervalRef.current = setInterval(() => {
+      setGenerationStage((prev) => (prev < GENERATION_STAGES.length - 1 ? prev + 1 : prev))
+    }, 1500)
+
     try {
       const result = await generateCampaign(form)
       const campaign = result.campaign
@@ -111,7 +134,11 @@ export default function CreateCampaign() {
     } catch (err) {
       setError(err.message)
     } finally {
+      if (stageIntervalRef.current) {
+        clearInterval(stageIntervalRef.current)
+      }
       setLoading(false)
+      setGenerationStage(0)
     }
   }
 
@@ -310,6 +337,60 @@ export default function CreateCampaign() {
       {/* Form card */}
       <div className="card p-8">
         {stepContent[step]}
+
+        {/* Animated 3-Stage Progress Indicator during Generation */}
+        {loading && (
+          <div
+            data-testid="generation-progress"
+            className="mt-6 p-5 rounded-2xl bg-surface-elevated/90 border border-brand-purple/40 backdrop-blur-md animate-fade-in shadow-card"
+          >
+            <div className="flex items-center justify-between mb-3 text-xs">
+              <div className="flex items-center gap-2 text-brand-purple-light font-semibold">
+                <Sparkles className="w-4 h-4 text-brand-cyan animate-pulse" />
+                <span>AI Campaign Generation</span>
+              </div>
+              <span className="text-gray-400 font-medium">Stage {generationStage + 1} of {GENERATION_STAGES.length}</span>
+            </div>
+
+            {/* Dynamic Progress Bar */}
+            <div className="w-full h-2 bg-surface-base rounded-full overflow-hidden p-0.5 border border-surface-border">
+              <div
+                className="h-full bg-gradient-to-r from-brand-purple via-brand-purple-light to-brand-cyan rounded-full transition-all duration-700 ease-out"
+                style={{ width: `${((generationStage + 1) / GENERATION_STAGES.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Stage Steps */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 mt-1">
+              {GENERATION_STAGES.map((s, idx) => (
+                <div
+                  key={s.id}
+                  className={`flex items-start gap-2.5 p-2 rounded-xl transition-all duration-300 ${
+                    idx === generationStage
+                      ? 'bg-brand-purple/10 border border-brand-purple/30 text-white font-medium'
+                      : idx < generationStage
+                      ? 'text-emerald-400 opacity-90'
+                      : 'text-gray-500 opacity-60'
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0">
+                    {idx < generationStage ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    ) : idx === generationStage ? (
+                      <Loader2 className="w-4 h-4 text-brand-cyan animate-spin" />
+                    ) : (
+                      <div className="w-3.5 h-3.5 rounded-full border border-gray-600 ml-0.5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate">{s.label}</p>
+                    <p className="text-[10px] text-gray-400 hidden sm:block truncate mt-0.5">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Navigation */}
         <div className="flex items-center justify-between mt-8 pt-6 border-t border-surface-border">

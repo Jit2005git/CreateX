@@ -19,7 +19,9 @@ All responses: JSON
   "status": "ok",
   "environment": "development",
   "gemini_configured": true,
-  "supabase_configured": true
+  "supabase_configured": true,
+  "rate_limiting_enabled": true,
+  "rate_limit_store": "in-memory"
 }
 ```
 
@@ -67,7 +69,8 @@ All responses: JSON
 ```
 
 **Error `422`:** Validation error (idea too short, missing field)  
-**Error `503`:** Gemini API key not configured  
+**Error `429`:** Rate limit exceeded (returns `Retry-After: <seconds>` header)  
+**Error `503`:** Gemini API key not configured or quota exhausted  
 **Error `500`:** Gemini API call failed  
 
 ---
@@ -95,6 +98,7 @@ All responses: JSON
 ```
 
 **Error `422`:** Campaign context invalid  
+**Error `429`:** Rate limit exceeded (returns `Retry-After: <seconds>` header)  
 **Error `503`:** Gemini or Supabase not configured  
 **Error `500`:** Image generation or upload failed  
 

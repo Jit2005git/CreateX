@@ -11,7 +11,8 @@ Error-to-HTTP mapping (per PROJECT_RULES.md section 4):
   Pydantic ValidationError -> 422  (FastAPI handles automatically)
   Any other Exception      -> 500  (unexpected)
 """
-from fastapi import APIRouter, HTTPException
+import logging
+from fastapi import APIRouter, HTTPException, Depends
 from google.genai.errors import ServerError
 
 from app.schemas.visual import VisualRequest, VisualResponse
@@ -24,16 +25,23 @@ from app.services.visual_service import (
     GeminiResponseError,
     StorageError,
 )
+from app.core.rate_limiter import RateLimiter
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+visual_limiter = RateLimiter("visual")
 
 
 @router.post("/generate", response_model=VisualResponse)
-async def generate_visual_endpoint(request: VisualRequest):
+async def generate_visual_endpoint(
+    request: VisualRequest,
+    _rate_limit: bool = Depends(visual_limiter),
+):
     """
     Generate a promotional poster image using Gemini image generation.
     Requires a valid CampaignContext. Returns an accessible image URL.
     Will never return a fabricated or placeholder image URL.
+    Protected by RateLimiter against quota exhaustion.
     """
     try:
         result = await generate_poster(request.campaign, request.style_override)
@@ -67,7 +75,8 @@ async def generate_visual_endpoint(request: VisualRequest):
         )
 
     except Exception as e:
+        logger.exception("Unexpected error during poster generation: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=f"Poster image generation failed: {str(e)}",
+            detail="An unexpected error occurred during poster generation. Please try again later.",
         )

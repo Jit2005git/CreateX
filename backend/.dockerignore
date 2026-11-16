@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+.env
+.env.*
+storage/posters/*
+!storage/posters/.gitkeep
+test_*.py

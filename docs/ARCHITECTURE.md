@@ -94,12 +94,18 @@ User Idea + Inputs
 
 ---
 
-## Security
+## Security & Abuse Protection
 
 - `SUPABASE_SERVICE_ROLE_KEY` is **never** sent to the frontend.
 - `GEMINI_API_KEY` is **never** exposed in frontend code.
-- RLS enabled on all Supabase tables; anon key access denied.
-- All env vars loaded via Pydantic `BaseSettings` from `.env`.
+- RLS enabled on all Supabase tables; direct anon key access denied.
+- Production token validation: Mock tokens fail closed with HTTP 401 in production (`APP_ENV=production`) and require explicit non-production enablement (`ALLOW_TEST_TOKENS=true`).
+- Startup safety validator enforces invariant configuration.
+- Multi-tier Rate Limiting:
+  * Primary: Authenticated user ID (`user:<id>`) or guest session (`guest:<session_id>`).
+  * Supplementary: Client IP address (`ip:<ip>`) to block session-cycling attacks.
+  * Dual storage: Distributed Redis sliding-window with in-memory thread-safe fallback on Redis outage.
+  * Returns HTTP 429 with standard `Retry-After` header.
 
 ---
 
@@ -107,6 +113,6 @@ User Idea + Inputs
 
 | Layer | Platform | Config |
 |-------|----------|--------|
-| Frontend | Vercel | `VITE_API_BASE_URL` env var |
-| Backend | Render | All backend env vars |
-| Database | Supabase | Managed PostgreSQL |
+| Frontend | Vercel / Cloudflare Pages | `VITE_API_BASE_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
+| Backend | Google Cloud Run / Render | `APP_ENV=production`, `REDIS_URL`, Gemini & Supabase secrets |
+| Database & Storage | Supabase Cloud | Managed PostgreSQL, GoTrue Auth, `createx-posters` CDN bucket |

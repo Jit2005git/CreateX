@@ -11,7 +11,8 @@ Error-to-HTTP mapping (per PROJECT_RULES.md section 4):
   Pydantic ValidationError -> 422  (FastAPI handles automatically)
   Any other Exception      -> 500  (unexpected)
 """
-from fastapi import APIRouter, HTTPException
+import logging
+from fastapi import APIRouter, HTTPException, Depends, Request
 from google.genai.errors import ServerError
 
 from app.schemas.campaign import CampaignRequest, CampaignResponse
@@ -23,18 +24,25 @@ from app.services.campaign_service import (
     GeminiModelError,
     GeminiResponseError,
 )
+from app.core.rate_limiter import RateLimiter
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+campaign_limiter = RateLimiter("campaign")
 
 
 @router.post("/generate", response_model=CampaignResponse)
-async def generate_campaign_endpoint(request: CampaignRequest):
+async def generate_campaign_endpoint(
+    request: CampaignRequest,
+    _rate_limit: bool = Depends(campaign_limiter),
+):
     """
     Generate a full campaign context from a creative idea.
 
     This is Step 1 of the AI orchestration pipeline.
     Returns a CampaignContext used by all downstream generators
     (poster, storyboard, social media).
+    Protected by RateLimiter against quota exhaustion.
     """
     try:
         campaign = await generate_campaign(request)
@@ -75,10 +83,8 @@ async def generate_campaign_endpoint(request: CampaignRequest):
             ),
         )
     except Exception as e:
+        logger.exception("Unexpected error during campaign generation: %s", e)
         raise HTTPException(
             status_code=500,
-            detail=(
-                f"An unexpected error occurred during campaign generation. "
-                f"Please try again. Detail: {str(e)}"
-            ),
+            detail="An unexpected error occurred during campaign generation. Please try again later.",
         )

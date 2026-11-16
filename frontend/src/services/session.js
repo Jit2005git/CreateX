@@ -7,6 +7,9 @@
 const SESSION_KEY = 'createx_session_id'
 
 function generateSessionId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return 'sess_' + crypto.randomUUID().replace(/-/g, '')
+  }
   return 'sess_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36)
 }
 
