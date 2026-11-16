@@ -1,34 +1,36 @@
 """
-CreateX AI – Phase 5 Verification Test Suite
+CreateX AI - Phase 5 Verification Test Suite
 
 Runs all checks required by the Phase 5 spec:
   1. Backend imports cleanly
   2. Configuration loading (env vars)
-  3. Missing API key → GeminiNotConfiguredError with correct message
+  3. Missing API key -> GeminiNotConfiguredError with correct message
   4. CampaignRequest validation (Pydantic)
   5. JSON extraction helper (strip fences, parse)
   6. CampaignContext builder (missing fields, defaults)
-  7. Error class hierarchy (correct exception types raised)
+  7. Async interface check
   8. Health endpoint shape
-  9. Live Gemini call (only if GEMINI_API_KEY is a real key)
+  9. Campaign endpoint error responses (503 and 422)
+  10. Live Gemini call (only if GEMINI_API_KEY is a real key)
 
 Usage:
-    python test_phase5.py                   # all tests
-    python test_phase5.py --live            # include live Gemini call
+    python test_phase5.py
 """
 import sys
 import os
 import json
 import asyncio
-import argparse
 import logging
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace", line_buffering=True)
 
 # Add backend/ to path so we can import directly
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 logging.basicConfig(level=logging.WARNING)
 
-# ─── Test helpers ─────────────────────────────────────────────────────────────
+# --- Test helpers ---
 
 PASS = "[PASS]"
 FAIL = "[FAIL]"
@@ -46,7 +48,7 @@ def report(label: str, passed: bool, detail: str = ""):
     results.append((label, passed))
 
 
-# ─── Test 1: Import check ─────────────────────────────────────────────────────
+# --- Test 1: Import check ---
 
 print("\n[1] Import checks")
 try:
@@ -90,7 +92,7 @@ try:
 except Exception as e:
     report("google-genai SDK import", False, str(e))
 
-# ─── Test 2: Config loading ───────────────────────────────────────────────────
+# --- Test 2: Config loading ---
 
 print("\n[2] Configuration loading")
 
@@ -116,13 +118,12 @@ try:
 except Exception as e:
     report("Settings load", False, str(e))
 
-# ─── Test 3: Missing API key raises correct error ─────────────────────────────
+# --- Test 3: Missing API key raises correct error ---
 
 print("\n[3] Missing API key handling")
 
+original_key = settings.gemini_api_key
 try:
-    # Temporarily patch the settings object
-    original_key = settings.gemini_api_key
     settings.gemini_api_key = ""  # simulate missing key
 
     async def _test_missing_key():
@@ -147,10 +148,6 @@ try:
 
     ok, detail = asyncio.run(_test_missing_key())
     report("Missing API key raises GeminiNotConfiguredError", ok, detail)
-
-    # Also check the error message doesn't expose any key value
-    settings.gemini_api_key = "AIzaSy_FAKE_KEY_FOR_TESTING_ONLY"
-    settings.gemini_api_key = original_key
     report("API key value not leaked in error messages", True, "(verified by design - only key presence checked)")
 
 except Exception as e:
@@ -158,7 +155,7 @@ except Exception as e:
 finally:
     settings.gemini_api_key = original_key
 
-# ─── Test 4: CampaignRequest Pydantic validation ──────────────────────────────
+# --- Test 4: CampaignRequest Pydantic validation ---
 
 print("\n[4] CampaignRequest validation")
 
@@ -187,20 +184,14 @@ try:
     CampaignRequest(idea="A sustainable sneaker brand", industry="", target_audience="Y", tone="Z")
     report("Empty industry raises ValidationError", False, "No error raised")
 except Exception as e:
-    # Empty string is falsy but Pydantic doesn't reject empty string by default
-    # This is acceptable for MVP — industry is not constrained to non-empty
-    report(
-        "Empty industry accepted (no min_length constraint — acceptable for MVP)",
-        True,
-        f"Got: {type(e).__name__}",
-    )
+    is_validation = "ValidationError" in type(e).__name__ or "validation" in str(e).lower()
+    report("Empty industry raises ValidationError", is_validation, type(e).__name__)
 
-# ─── Test 5: JSON extraction helper ──────────────────────────────────────────
+# --- Test 5: JSON extraction helper ---
 
 print("\n[5] JSON extraction (_extract_json)")
 
 test_cases = [
-    # (description, input, expected_key)
     ("Plain JSON", '{"campaign_name": "Test"}', "campaign_name"),
     ("JSON in ```json fence", '```json\n{"campaign_name": "Test"}\n```', "campaign_name"),
     ("JSON in plain ``` fence", '```\n{"campaign_name": "Test"}\n```', "campaign_name"),
@@ -223,7 +214,7 @@ except GeminiResponseError:
 except Exception as e:
     report("_extract_json: invalid JSON raises GeminiResponseError", False, f"Wrong type: {type(e).__name__}")
 
-# ─── Test 6: CampaignContext builder ─────────────────────────────────────────
+# --- Test 6: CampaignContext builder ---
 
 print("\n[6] CampaignContext builder (_build_context)")
 
@@ -281,7 +272,7 @@ try:
 except Exception as e:
     report("_build_context: missing brand_colors falls back to defaults", False, str(e))
 
-# ─── Test 7: Async interface ──────────────────────────────────────────────────
+# --- Test 7: Async interface ---
 
 print("\n[7] Async interface check")
 
@@ -299,7 +290,7 @@ try:
 except Exception as e:
     report("client.aio.models.generate_content is async", False, str(e))
 
-# ─── Test 8: Health endpoint shape ───────────────────────────────────────────
+# --- Test 8: Health endpoint shape ---
 
 print("\n[8] Health endpoint response shape")
 
@@ -310,7 +301,7 @@ try:
 
     r = client_http.get("/")
     ok_root = r.status_code == 200 and "message" in r.json()
-    report("GET / → 200 with 'message'", ok_root, r.json())
+    report("GET / -> 200 with 'message'", ok_root, str(r.json()))
 
     r2 = client_http.get("/api/health")
     body = r2.json()
@@ -322,7 +313,7 @@ try:
         and "environment" in body
     )
     report(
-        "GET /api/health → 200 with correct shape",
+        "GET /api/health -> 200 with correct shape",
         ok_health,
         json.dumps(body),
     )
@@ -338,17 +329,17 @@ try:
 except Exception as e:
     report("Health endpoint tests", False, str(e))
 
-# ─── Test 9: Campaign endpoint → 503 when key missing ────────────────────────
+# --- Test 9: Campaign endpoint error responses ---
 
 print("\n[9] Campaign endpoint error responses (no live key needed)")
 
+original_key = settings.gemini_api_key
 try:
     import main as app_main
     from fastapi.testclient import TestClient
     client_http = TestClient(app_main.app)
 
     # Patch key out temporarily
-    original_key = settings.gemini_api_key
     settings.gemini_api_key = ""
 
     r = client_http.post("/api/campaign/generate", json={
@@ -360,14 +351,12 @@ try:
         "visual_style": "modern",
     })
     report(
-        "POST /api/campaign/generate (no key) → 503",
+        "POST /api/campaign/generate (no key) -> 503",
         r.status_code == 503,
         f"status={r.status_code}, detail={r.json().get('detail', '')[:80]}",
     )
 
-    settings.gemini_api_key = original_key
-
-    # Test Pydantic validation — idea too short
+    # Test Pydantic validation - idea too short
     r2 = client_http.post("/api/campaign/generate", json={
         "idea": "short",
         "industry": "Fashion",
@@ -375,7 +364,7 @@ try:
         "tone": "bold",
     })
     report(
-        "POST /api/campaign/generate (short idea) → 422",
+        "POST /api/campaign/generate (short idea) -> 422",
         r2.status_code == 422,
         f"status={r2.status_code}",
     )
@@ -385,27 +374,33 @@ try:
         "idea": "A sustainable sneaker brand for Gen Z consumers",
     })
     report(
-        "POST /api/campaign/generate (missing industry+tone) → 422",
+        "POST /api/campaign/generate (missing industry+tone) -> 422",
         r3.status_code == 422,
         f"status={r3.status_code}",
     )
 
 except Exception as e:
     report("Campaign endpoint error response tests", False, str(e))
+finally:
+    settings.gemini_api_key = original_key
 
-# ─── Test 10: Live Gemini call (optional) ────────────────────────────────────
+# --- Test 10: Live Gemini call (optional) ---
 
-print("\n[10] Live Gemini generation (requires real GEMINI_API_KEY)")
+print("\n[10] Live Gemini generation (requires real GEMINI_API_KEY and network)")
 
 has_real_key = bool(
     settings.gemini_api_key
     and settings.gemini_api_key != "your_gemini_api_key_here"
     and len(settings.gemini_api_key) > 20
 )
+run_live = "--live" in sys.argv
 
 if not has_real_key:
-    print(f"  {SKIP} No real GEMINI_API_KEY found — skipping live tests.")
-    print(f"         To run: set GEMINI_API_KEY in backend/.env then rerun.")
+    print(f"  {SKIP} No real GEMINI_API_KEY found - skipping live tests.")
+    print("         To run: set GEMINI_API_KEY in backend/.env then rerun with --live.")
+elif not run_live:
+    print(f"  {SKIP} Real key found but --live flag not set - skipping live network call.")
+    print("         To run live call: python test_phase5.py --live")
 else:
     async def _live_test():
         req = CampaignRequest(
@@ -416,7 +411,7 @@ else:
             platforms=["instagram"],
             visual_style="modern",
         )
-        ctx = await generate_campaign(req)
+        ctx = await asyncio.wait_for(generate_campaign(req), timeout=45.0)
         return ctx
 
     try:
@@ -453,13 +448,12 @@ else:
             "original_idea preserved in context",
             ctx.original_idea is not None,
         )
-        # Serialise to dict to ensure Pydantic model is consistent
         d = ctx.model_dump()
         report(
             "CampaignContext.model_dump() succeeds",
             isinstance(d, dict) and "campaign_name" in d,
         )
-        print(f"\n  === Live Campaign Preview ===")
+        print("\n  === Live Campaign Preview ===")
         print(f"  Name   : {ctx.campaign_name}")
         print(f"  Tagline: {ctx.tagline}")
         print(f"  Colors : primary={ctx.brand_colors.primary}  secondary={ctx.brand_colors.secondary}")
@@ -474,7 +468,7 @@ else:
     except Exception as e:
         report("Live Gemini call", False, f"{type(e).__name__}: {e}")
 
-# ─── Summary ──────────────────────────────────────────────────────────────────
+# --- Summary ---
 
 passed = sum(1 for _, ok in results if ok)
 failed = sum(1 for _, ok in results if not ok)

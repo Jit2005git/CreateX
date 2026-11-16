@@ -1,11 +1,17 @@
 """
 CreateX AI - FastAPI Application Entry Point
 """
+from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.api.routes import campaign, visual, storyboard, social, projects
+from app.services.storage_service import LOCAL_STORAGE_DIR, ensure_storage_dirs
+
+# Ensure storage directories exist
+ensure_storage_dirs()
 
 app = FastAPI(
     title="CreateX AI API",
@@ -18,11 +24,14 @@ app = FastAPI(
 # --- CORS ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000"],
+    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- STATIC STORAGE ---
+app.mount("/static", StaticFiles(directory=str(LOCAL_STORAGE_DIR)), name="static")
 
 # --- ROUTES ---
 app.include_router(campaign.router,    prefix="/api/campaign",   tags=["Campaign"])
@@ -43,7 +52,12 @@ async def health():
         "status": "ok",
         "environment": settings.app_env,
         "gemini_configured": bool(settings.gemini_api_key),
-        "supabase_configured": bool(settings.supabase_url and settings.supabase_service_role_key),
+        "supabase_configured": bool(
+            settings.supabase_url
+            and "your-project-id" not in settings.supabase_url
+            and settings.supabase_service_role_key
+            and "your_supabase" not in settings.supabase_service_role_key
+        ),
     }
 
 
