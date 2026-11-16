@@ -52,17 +52,20 @@ async def root():
 @app.get("/api/health", tags=["Health"])
 async def health():
     from app.services.supabase_service import is_supabase_configured
+    store_type = getattr(settings, "rate_limit_store_type", "memory").strip().lower()
     return {
         "status": "ok",
         "environment": settings.app_env,
         "gemini_configured": bool(settings.gemini_api_key),
         "supabase_configured": is_supabase_configured(),
         "rate_limiting_enabled": settings.rate_limit_enabled,
-        "rate_limit_store": "redis" if bool(settings.redis_url) else "in-memory",
-        "distributed_limiter_active": bool(settings.redis_url),
+        "rate_limit_store": store_type,
+        "distributed_limiter_active": bool(settings.redis_url or store_type == "postgres"),
     }
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)

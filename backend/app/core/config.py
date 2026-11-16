@@ -33,7 +33,16 @@ class Settings(BaseSettings):
     # Security & Testing
     allow_test_tokens: bool = False
 
-    # Redis & Distributed Rate Limiting
+    # Network & Reverse Proxy Trust
+    # Comma-separated list of trusted proxy IPs or CIDR networks (IPv4/IPv6).
+    # If empty, all forwarded headers (e.g. X-Forwarded-For) are ignored and socket IP is used.
+    # Example: "127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    trusted_proxies: str = ""
+
+    # Rate Limiting & Storage Backend
+    # Default to "memory" for immediate MVP launch without unverified DB migrations.
+    # Supports "postgres" (requires migration 20261117_001 on Supabase) or "redis".
+    rate_limit_store_type: str = "memory"
     redis_url: str = ""
     rate_limit_enabled: bool = True
     rate_limit_campaign_per_minute: int = 5
