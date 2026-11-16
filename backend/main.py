@@ -48,16 +48,12 @@ async def root():
 
 @app.get("/api/health", tags=["Health"])
 async def health():
+    from app.services.supabase_service import is_supabase_configured
     return {
         "status": "ok",
         "environment": settings.app_env,
         "gemini_configured": bool(settings.gemini_api_key),
-        "supabase_configured": bool(
-            settings.supabase_url
-            and "your-project-id" not in settings.supabase_url
-            and settings.supabase_service_role_key
-            and "your_supabase" not in settings.supabase_service_role_key
-        ),
+        "supabase_configured": is_supabase_configured(),
     }
 
 

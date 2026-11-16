@@ -13,10 +13,19 @@ logger = logging.getLogger(__name__)
 _supabase_client: Optional[Client] = None
 
 
+def is_supabase_configured() -> bool:
+    return bool(
+        settings.supabase_url
+        and "your-project-id" not in settings.supabase_url
+        and settings.supabase_service_role_key
+        and "your_supabase" not in settings.supabase_service_role_key
+    )
+
+
 def get_supabase() -> Client:
     global _supabase_client
     if _supabase_client is None:
-        if not settings.supabase_url or not settings.supabase_service_role_key:
+        if not is_supabase_configured():
             raise ValueError(
                 "Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env"
             )

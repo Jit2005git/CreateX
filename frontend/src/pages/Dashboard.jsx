@@ -21,18 +21,49 @@ export default function Dashboard() {
     try {
       setLoading(true)
       const data = await getProjects(sessionId)
-      setProjects(data.projects || [])
-    } catch (err) {
-      // Supabase not configured yet — show empty state, not error
-      setProjects([])
-    } finally {
-      setLoading(false)
+      if (data?.projects && data.projects.length > 0) {
+        setProjects(data.projects)
+        return
+      }
+    } catch {
+      // Supabase not configured or query failed — check session fallback
     }
+
+    // Session fallback for demo/offline workspace
+    const local = sessionStorage.getItem('createx_campaign_local') || sessionStorage.getItem('campaign_local')
+    if (local) {
+      try {
+        const c = JSON.parse(local)
+        setProjects([
+          {
+            id: 'local',
+            title: c.campaign_name || 'Active Campaign',
+            original_idea: c.original_idea || c.description || 'Active session campaign project',
+            industry: c.industry || 'General',
+            created_at: new Date().toISOString(),
+            tone: c.tone || c.writing_tone,
+            campaign_data: c,
+          },
+        ])
+      } catch {
+        setProjects([])
+      }
+    } else {
+      setProjects([])
+    }
+    setLoading(false)
   }
 
   async function handleDelete(projectId) {
     if (!confirm('Delete this project? This cannot be undone.')) return
     try {
+      if (projectId === 'local') {
+        sessionStorage.removeItem('createx_campaign_local')
+        sessionStorage.removeItem('campaign_local')
+        sessionStorage.removeItem('assets_local')
+        setProjects([])
+        return
+      }
       await deleteProject(projectId)
       setProjects(prev => prev.filter(p => p.id !== projectId))
     } catch (err) {

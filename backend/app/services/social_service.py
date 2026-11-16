@@ -2,9 +2,11 @@
 Generates platform-optimized captions, hashtags, and copy.
 """
 import json
+import asyncio
 import logging
 import google.genai as genai
 from google.genai import types
+from google.genai.errors import ServerError, APIError
 
 from app.core.config import settings
 from app.core.prompts import SOCIAL_SYSTEM_PROMPT, SOCIAL_PROMPT_TEMPLATE
@@ -33,16 +35,45 @@ async def generate_social(request: SocialRequest) -> SocialData:
     )
 
     try:
-        response = client.models.generate_content(
-            model=settings.gemini_text_model,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=SOCIAL_SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                temperature=0.85,
-                max_output_tokens=3000,
-            ),
-        )
+        response = None
+        for attempt in range(3):
+            try:
+                aio_models = getattr(client, "aio", None)
+                generate_fn = getattr(getattr(aio_models, "models", None), "generate_content", None)
+                if generate_fn and asyncio.iscoroutinefunction(generate_fn):
+                    response = await client.aio.models.generate_content(
+                        model=settings.gemini_text_model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SOCIAL_SYSTEM_PROMPT,
+                            response_mime_type="application/json",
+                            temperature=0.85,
+                            max_output_tokens=3000,
+                        ),
+                    )
+                else:
+                    sync_res = client.models.generate_content(
+                        model=settings.gemini_text_model,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SOCIAL_SYSTEM_PROMPT,
+                            response_mime_type="application/json",
+                            temperature=0.85,
+                            max_output_tokens=3000,
+                        ),
+                    )
+                    if asyncio.iscoroutine(sync_res):
+                        response = await sync_res
+                    else:
+                        response = sync_res
+                break
+            except Exception as e:
+                err_str = str(e)
+                if ("503" in err_str or "UNAVAILABLE" in err_str or "high demand" in err_str) and attempt < 2:
+                    logger.warning(f"Gemini API experiencing high demand (attempt {attempt+1}/3), retrying in 2s...")
+                    await asyncio.sleep(2.0)
+                else:
+                    raise
 
         raw_text = response.text.strip()
         if raw_text.startswith("```"):
