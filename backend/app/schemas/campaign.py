@@ -1,4 +1,4 @@
-"""CreateX AI – Campaign Pydantic Schemas"""
+"""CreateX AI - Campaign Pydantic Schemas"""
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -12,9 +12,9 @@ class BrandColors(BaseModel):
 
 class CampaignRequest(BaseModel):
     idea: str = Field(..., min_length=10, max_length=2000, description="The creative idea")
-    industry: str = Field(..., description="Industry or sector")
-    target_audience: str = Field(..., description="Target audience description")
-    tone: str = Field(..., description="Campaign tone (e.g. bold, playful, professional)")
+    industry: str = Field(..., min_length=1, description="Industry or sector")
+    target_audience: str = Field(..., min_length=1, description="Target audience description")
+    tone: str = Field(..., min_length=1, description="Campaign tone (e.g. bold, playful, professional)")
     platforms: list[str] = Field(default=["instagram"], description="Target social platforms")
     visual_style: str = Field(default="modern", description="Visual style preference")
 

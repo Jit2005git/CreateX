@@ -1,16 +1,21 @@
 """
-CreateX AI – Application Configuration
+CreateX AI - Application Configuration
 Loads all settings from environment variables via Pydantic BaseSettings.
 """
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+# Path to backend/.env regardless of current working directory
+BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_PATH = BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
     # Gemini
     gemini_api_key: str = ""
-    gemini_text_model: str = "gemini-2.0-flash"
-    gemini_image_model: str = "gemini-2.0-flash-preview-image-generation"
+    gemini_text_model: str = "gemini-3.1-flash-lite"
+    gemini_image_model: str = "gemini-2.5-flash-image"
 
     # Supabase
     supabase_url: str = ""
@@ -19,9 +24,13 @@ class Settings(BaseSettings):
 
     # App
     frontend_url: str = "http://localhost:5173"
+    backend_url: str = "http://localhost:8000"
     app_env: str = "development"
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {
+        "env_file": (ENV_PATH, ".env"),
+        "extra": "ignore",
+    }
 
 
 @lru_cache

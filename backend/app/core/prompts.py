@@ -117,3 +117,15 @@ Generate a JSON response with this exact structure:
   ],
   "ad_copy": "Short advertising copy (2-3 sentences)"
 }}"""
+
+POSTER_PROMPT_TEMPLATE = """A professional, high-impact promotional advertising poster for '{campaign_name}'.
+Campaign Concept: {original_idea}
+Tagline: "{tagline}"
+Visual Direction: {visual_direction}
+Brand Color Palette: Primary {primary_color}, Secondary {secondary_color}, Accent {accent_color}, Background {bg_color}.
+Target Audience: {target_audience}
+Tone & Mood: {tone}
+Aesthetic Style: {visual_style}
+{style_override}
+Composition: Striking graphic design, balanced layout, dramatic lighting, commercial grade, clean typography, 8k resolution, award-winning visual poster."""
+
