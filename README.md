@@ -828,8 +828,8 @@ We would like to acknowledge:
 **Category:** AI / Creative Technology / Marketing  
 **Development Stage:** MVP  
 
-**Team:** [Add team member names]  
-**Hackathon:** [Add hackathon name]  
+**Team:** CHATUSH_CODE401
+**Hackathon:** GeNarrative Clash
 **Live Demo:** [Add public demo URL when deployed]  
 **Demo Video:** [Add demo video URL if available]
 
