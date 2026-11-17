@@ -823,18 +823,13 @@ We would like to acknowledge:
 
 ## 👨‍💻 Project Information
 
-**Project:** CreateX AI  
-**Repository:** https://github.com/Jit2005git/CreateX  
-**Category:** AI / Creative Technology / Marketing  
-**Development Stage:** MVP  
-
-**Team:** CHATUSH_CODE401 
-**Hackathon:** GeNarrative Clash 
-**Live Demo:** Not Deployed Yet 
-**Demo Video:** https://www.youtube.com/watch?v=6NDZivAWG9Y
-
----
-
+| Field | Details |
+|---|---|
+| Project | CreateX AI |
+| Team | CHATUSH_CODE401 |
+| Hackathon | GeNarrative Clash |
+| Live Demo | Not Deployed Yet |
+| Demo Video | https://www.youtube.com/watch?v=6NDZivAWG9Y |
 ## ⭐ Final Note
 
 CreateX AI is built around one simple idea:
