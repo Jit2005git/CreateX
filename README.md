@@ -830,8 +830,8 @@ We would like to acknowledge:
 
 **Team:** CHATUSH_CODE401
 **Hackathon:** GeNarrative Clash
-**Live Demo:** [Add public demo URL when deployed]  
-**Demo Video:** [Add demo video URL if available]
+**Live Demo:** Not Deployed Yet
+**Demo Video:** https://www.youtube.com/watch?v=6NDZivAWG9Y
 
 ---
 
